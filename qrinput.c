@@ -19,9 +19,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -244,7 +241,7 @@ int QRinput_append(QRinput *input, QRencodeMode mode, int size, const unsigned c
  * @throw EINVAL invalid parameter.
  * @throw ENOMEM unable to allocate memory.
  */
-__STATIC int QRinput_insertStructuredAppendHeader(QRinput *input, int size, int index, unsigned char parity)
+static int QRinput_insertStructuredAppendHeader(QRinput *input, int size, int index, unsigned char parity)
 {
 	QRinput_List *entry;
 	unsigned char buf[3];
@@ -425,7 +422,7 @@ static int QRinput_encodeModeNum(QRinput_List *entry, int version, int mqr)
 	} else {
 		ret = BitStream_appendNum(entry->bstream, 4, QRSPEC_MODEID_NUM);
 		if(ret < 0) goto ABORT;
-	
+
 		ret = BitStream_appendNum(entry->bstream, QRspec_lengthIndicator(QR_MODE_NUM, version), entry->size);
 		if(ret < 0) goto ABORT;
 	}
@@ -778,7 +775,7 @@ static int QRinput_encodeModeFNC1Second(QRinput_List *entry, int version)
 
 	ret = BitStream_appendNum(entry->bstream, 4, QRSPEC_MODEID_FNC1SECOND);
 	if(ret < 0) goto ABORT;
-	
+
 	ret = BitStream_appendBytes(entry->bstream, 1, entry->data);
 	if(ret < 0) goto ABORT;
 
@@ -846,7 +843,7 @@ static int QRinput_encodeModeECI(QRinput_List *entry, int version)
 
 	ret = BitStream_appendNum(entry->bstream, 4, QRSPEC_MODEID_ECI);
 	if(ret < 0) goto ABORT;
-	
+
 	ret = BitStream_appendNum(entry->bstream, words * 8, code);
 	if(ret < 0) goto ABORT;
 
@@ -956,7 +953,7 @@ static int QRinput_estimateBitStreamSizeOfEntry(QRinput_List *entry, int version
  * @param version version of the symbol
  * @return number of bits
  */
-__STATIC int QRinput_estimateBitStreamSize(QRinput *input, int version)
+static int QRinput_estimateBitStreamSize(QRinput *input, int version)
 {
 	QRinput_List *list;
 	int bits = 0;
@@ -1000,7 +997,7 @@ static int QRinput_estimateVersion(QRinput *input)
  * @param bits
  * @return required length of code words in bytes.
  */
-__STATIC int QRinput_lengthOfCode(QRencodeMode mode, int version, int bits)
+static int QRinput_lengthOfCode(QRencodeMode mode, int version, int bits)
 {
 	int payload, size, chunks, remain, maxsize;
 
@@ -1352,7 +1349,7 @@ static int QRinput_insertFNC1Header(QRinput *input)
  * @return merged bit stream
  */
 
-__STATIC BitStream *QRinput_mergeBitStream(QRinput *input)
+static BitStream *QRinput_mergeBitStream(QRinput *input)
 {
 	BitStream *bstream;
 	QRinput_List *list;
@@ -1395,7 +1392,7 @@ __STATIC BitStream *QRinput_mergeBitStream(QRinput *input)
  * @return padded merged bit stream
  */
 
-__STATIC BitStream *QRinput_getBitStream(QRinput *input)
+static BitStream *QRinput_getBitStream(QRinput *input)
 {
 	BitStream *bstream;
 	int ret;
@@ -1510,7 +1507,7 @@ int QRinput_Struct_appendInput(QRinput_Struct *s, QRinput *input)
 void QRinput_Struct_free(QRinput_Struct *s)
 {
 	QRinput_InputList *list, *next;
-	
+
 	if(s != NULL) {
 		list = s->head;
 		while(list != NULL) {
@@ -1553,7 +1550,7 @@ static int QRinput_List_shrinkEntry(QRinput_List *entry, int bytes)
 	return 0;
 }
 
-__STATIC int QRinput_splitEntry(QRinput_List *entry, int bytes)
+static int QRinput_splitEntry(QRinput_List *entry, int bytes)
 {
 	QRinput_List *e;
 	int ret;

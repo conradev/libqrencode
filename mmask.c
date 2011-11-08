@@ -19,9 +19,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -31,7 +28,7 @@
 #include "mqrspec.h"
 #include "mmask.h"
 
-__STATIC void MMask_writeFormatInformation(int version, int width, unsigned char *frame, int mask, QRecLevel level)
+static void MMask_writeFormatInformation(int version, int width, unsigned char *frame, int mask, QRecLevel level)
 {
 	unsigned int format;
 	unsigned char v;
@@ -91,20 +88,6 @@ static MaskMaker *maskMakers[maskNum] = {
 	Mask_mask0, Mask_mask1, Mask_mask2, Mask_mask3
 };
 
-#ifdef WITH_TESTS
-unsigned char *MMask_makeMaskedFrame(int width, unsigned char *frame, int mask)
-{
-	unsigned char *masked;
-
-	masked = (unsigned char *)malloc(width * width);
-	if(masked == NULL) return NULL;
-
-	maskMakers[mask](width, frame, masked);
-
-	return masked;
-}
-#endif
-
 unsigned char *MMask_makeMask(int version, unsigned char *frame, int mask, QRecLevel level)
 {
 	unsigned char *masked;
@@ -125,7 +108,7 @@ unsigned char *MMask_makeMask(int version, unsigned char *frame, int mask, QRecL
 	return masked;
 }
 
-__STATIC int MMask_evaluateSymbol(int width, unsigned char *frame)
+static int MMask_evaluateSymbol(int width, unsigned char *frame)
 {
 	int x, y;
 	unsigned char *p;

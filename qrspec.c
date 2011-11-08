@@ -1,13 +1,13 @@
 /*
  * qrencode - QR Code encoder
  *
- * QR Code specification in convenient format. 
+ * QR Code specification in convenient format.
  * Copyright (C) 2006-2011 Kentaro Fukuchi <kentaro@fukuchi.org>
  *
  * The following data / specifications are taken from
  * "Two dimensional symbol -- QR-code -- Basic Specification" (JIS X0510:2004)
  *  or
- * "Automatic identification and data capture techniques -- 
+ * "Automatic identification and data capture techniques --
  *  QR Code 2005 bar code symbology specification" (ISO/IEC 18004:2006)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,16 +25,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
-#endif
 
 #include "qrspec.h"
 #include "qrinput.h"
@@ -400,9 +395,7 @@ unsigned int QRspec_getFormatInfo(int mask, QRecLevel level)
 /* C99 says that static storage shall be initialized to a null pointer
  * by compiler. */
 static unsigned char *frames[QRSPEC_VERSION_MAX + 1];
-#ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t frames_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
 
 /**
  * Put a finder pattern.
@@ -526,15 +519,11 @@ unsigned char *QRspec_newFrame(int version)
 
 	if(version < 1 || version > QRSPEC_VERSION_MAX) return NULL;
 
-#ifdef HAVE_LIBPTHREAD
 	pthread_mutex_lock(&frames_mutex);
-#endif
 	if(frames[version] == NULL) {
 		frames[version] = QRspec_createFrame(version);
 	}
-#ifdef HAVE_LIBPTHREAD
 	pthread_mutex_unlock(&frames_mutex);
-#endif
 	if(frames[version] == NULL) return NULL;
 
 	width = qrspecCapacity[version].width;
@@ -549,14 +538,10 @@ void QRspec_clearCache(void)
 {
 	int i;
 
-#ifdef HAVE_LIBPTHREAD
 	pthread_mutex_lock(&frames_mutex);
-#endif
 	for(i=1; i<=QRSPEC_VERSION_MAX; i++) {
 		free(frames[i]);
 		frames[i] = NULL;
 	}
-#ifdef HAVE_LIBPTHREAD
 	pthread_mutex_unlock(&frames_mutex);
-#endif
 }

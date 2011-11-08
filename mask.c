@@ -19,9 +19,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -31,7 +28,7 @@
 #include "qrspec.h"
 #include "mask.h"
 
-__STATIC int Mask_writeFormatInformation(int width, unsigned char *frame, int mask, QRecLevel level)
+static int Mask_writeFormatInformation(int width, unsigned char *frame, int mask, QRecLevel level)
 {
 	unsigned int format;
 	unsigned char v;
@@ -147,20 +144,6 @@ static MaskMaker *maskMakers[maskNum] = {
 	Mask_mask4, Mask_mask5, Mask_mask6, Mask_mask7
 };
 
-#ifdef WITH_TESTS
-unsigned char *Mask_makeMaskedFrame(int width, unsigned char *frame, int mask)
-{
-	unsigned char *masked;
-
-	masked = (unsigned char *)malloc(width * width);
-	if(masked == NULL) return NULL;
-
-	maskMakers[mask](width, frame, masked);
-
-	return masked;
-}
-#endif
-
 unsigned char *Mask_makeMask(int width, unsigned char *frame, int mask, QRecLevel level)
 {
 	unsigned char *masked;
@@ -185,7 +168,7 @@ unsigned char *Mask_makeMask(int width, unsigned char *frame, int mask, QRecLeve
 //static int n3;
 //static int n4;
 
-__STATIC int Mask_calcN1N3(int length, int *runLength)
+static int Mask_calcN1N3(int length, int *runLength)
 {
 	int i;
 	int demerit = 0;
@@ -218,7 +201,7 @@ __STATIC int Mask_calcN1N3(int length, int *runLength)
 	return demerit;
 }
 
-__STATIC int Mask_calcN2(int width, unsigned char *frame)
+static int Mask_calcN2(int width, unsigned char *frame)
 {
 	int x, y;
 	unsigned char *p;
@@ -241,7 +224,7 @@ __STATIC int Mask_calcN2(int width, unsigned char *frame)
 	return demerit;
 }
 
-__STATIC int Mask_calcRunLength(int width, unsigned char *frame, int dir, int *runLength)
+static int Mask_calcRunLength(int width, unsigned char *frame, int dir, int *runLength)
 {
 	int head;
 	int i;
@@ -271,7 +254,7 @@ __STATIC int Mask_calcRunLength(int width, unsigned char *frame, int dir, int *r
 	return head + 1;
 }
 
-__STATIC int Mask_evaluateSymbol(int width, unsigned char *frame)
+static int Mask_evaluateSymbol(int width, unsigned char *frame)
 {
 	int x, y;
 	int demerit = 0;
