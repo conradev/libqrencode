@@ -1,3 +1,57 @@
+2012.04.11 Kentaro FUKUCHI <kentaro@fukuchi.org>
+	[master]
+	* qrenc.c:
+	  - Paper size and margin are now set properly in SVG output.
+
+2012.04.10 Kentaro FUKUCHI <kentaro@fukuchi.org>
+	[master]
+	* Following fixes have been contributed by Yutaka Niibe.
+	* qrencode.1.in:
+	  - "Hyphen-used-as-minus-sign" error has been fixed.
+	* configure.ac, libqrencode.pc.in, tests/Makefile.am:
+	  - Explicit link to libpthread has been eliminated.
+	* qrenc.c:
+	  - Pulled Repox's SVG patch (Pull request #10).
+	  - Slightly simplified.
+
+2012.04.01 Kentaro FUKUCHI <kentaro@fukuchi.org>
+	[3.3]
+	* qrenc.c:
+	  - ASCII mode has been added. (Thanks to Ralf Ertzinger)
+	  - Small code cleanups.
+	  - ASCII mode now handles ".txt" suffix correctly.
+	* NEWS, README:
+	  - Documentation updates.
+	* Version 3.3.0 has been released.
+	[master]
+	* Merged to 3.3.0.
+
+2012.03.31 Kentaro FUKUCHI <kentaro@fukuchi.org>
+	[3.2]
+	* README, NEWS, configure.ac:
+	  - Bumped version to 3.2.1.
+	* Version 3.2.1 has been released.
+	[3.3]
+	* qrenc.c:
+	  - Copyright year has been updated.
+
+2012.03.30 Kentaro FUKUCHI <kentaro@fukuchi.org>
+	* libqrencode.pc.in :
+	  - Replaced obsolete macro LIBPTHREAD with LIBS. (thx to gniibe)
+	* configure.ac:
+	  - Checks $ac_cv_lib_pthread_pthread_mutex_init instead of
+	    HAVE_LIBPTHREAD. (thx to gniibe)
+
+2012.02.28 Kentaro FUKUCHI <kentaro@fukuchi.org>
+	[master, 3.2.1]
+	* .gitignore:
+	  - Added "tests/pthread_qrencode".
+	[3.3]
+	* 3.3 branch has been started.
+	  - 3.2.1 has been canceled.
+	* configure.ac, README, NEWS:
+	  - Version number changes.
+
 2012.01.31 Kentaro FUKUCHI <kentaro@fukuchi.org>
 	[master]
 	* Recent 3.2 branch has been merged into the master.

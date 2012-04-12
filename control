@@ -1,6 +1,6 @@
 Package: libqrencode
 Name: libqrencode
-Version: 3.2.1
+Version: 3.3.0
 Architecture: iphoneos-arm
 Description: libqrencode is a library for encoding data in a QR Code symbol
 Maintainer: Conrad Kramer <support@kramerapps.com>

@@ -1,4 +1,4 @@
-libqrencode 3.2.1 - QR Code encoding library
+libqrencode 3.3.0 - QR Code encoding library
 
 GENERAL INFORMATION
 ===================
@@ -79,7 +79,7 @@ application.
 
 LICENSING INFORMATION
 =====================
-Copyright (C) 2006-2011 Kentaro Fukuchi
+Copyright (C) 2006-2012 Kentaro Fukuchi
 
 This library is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the Free
@@ -123,11 +123,15 @@ countries.
 Reed-Solomon encoder is written by Phil Karn, KA9Q.
 Copyright (C) 2002, 2003, 2004, 2006 Phil Karn, KA9Q
 
-NANKI Haruo          - improved lower-case characteres encoding
-Philippe Delcroix    - improved mask evaluation
-Yusuke Mihara        - structured-append support
-David Dahl           - DPI patch
-Adam Shepherd        - bug fix patch of the mask evaluation
-Josef Eisl (zapster) - EPS support patch
-Colin (moshen)       - ANSI support patch
-Shigeyuki Hirai, Paul Janssens, wangsai, Gavan Fantom - bug report / suggestion
+NANKI Haruo           - improved lower-case characteres encoding
+Philippe Delcroix     - improved mask evaluation
+Yusuke Mihara         - structured-append support
+David Dahl            - DPI patch
+Adam Shepherd         - bug fix patch of the mask evaluation
+Josef Eisl (zapster)  - EPS support patch
+Colin (moshen)        - ANSI support patch
+Ralf Ertzinger        - ASCII support patch
+Yutaka Niibe (gniibe) - various bug fix patches
+Dan Strom (Repox)     - SVG support patch
+Shigeyuki Hirai, Paul Janssens, wangsai, Gavan Fantom, Matthew Baker
+ - bug report / suggestion
