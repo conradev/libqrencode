@@ -134,7 +134,7 @@ static QRRawCode *QRraw_new(QRinput *input)
 	}
 
 	raw->blocks = QRspec_rsBlockNum(spec);
-	raw->rsblock = (RSblock *)calloc(sizeof(RSblock), raw->blocks);
+	raw->rsblock = (RSblock *)calloc(raw->blocks, sizeof(RSblock));
 	if(raw->rsblock == NULL) {
 		QRraw_free(raw);
 		return NULL;
@@ -229,7 +229,7 @@ static MQRRawCode *MQRraw_new(QRinput *input)
 		return NULL;
 	}
 
-	raw->rsblock = (RSblock *)calloc(sizeof(RSblock), 1);
+	raw->rsblock = (RSblock *)calloc(1, sizeof(RSblock));
 	if(raw->rsblock == NULL) {
 		MQRraw_free(raw);
 		return NULL;
@@ -517,7 +517,7 @@ static QRcode *QRcode_encodeMaskMQR(QRinput *input, int mask)
 	for(i=0; i<raw->dataLength + raw->eccLength; i++) {
 		code = MQRraw_getCode(raw);
 		if(raw->oddbits && i == raw->dataLength - 1) {
-			bit = 1 << raw->oddbits;
+			bit = 1 << (raw->oddbits - 1);
 			for(j=0; j<raw->oddbits; j++) {
 				p = FrameFiller_next(filler);
 				if(p == NULL) goto EXIT;

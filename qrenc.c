@@ -1,3 +1,5 @@
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: t -*-*/
+
 /**
  * qrencode - QR Code encoder
  *
@@ -38,6 +40,8 @@ static int structured = 0;
 static int micro = 0;
 static QRecLevel level = QR_ECLEVEL_L;
 static QRencodeMode hint = QR_MODE_8;
+static unsigned int fg_color[4] = {0, 0, 0, 255};
+static unsigned int bg_color[4] = {255, 255, 255, 255};
 
 enum imageType {
 	PNG_TYPE,
@@ -46,7 +50,9 @@ enum imageType {
 	ANSI_TYPE,
 	ANSI256_TYPE,
 	ASCII_TYPE,
-	ASCIIi_TYPE
+	ASCIIi_TYPE,
+	UTF8_TYPE,
+	ANSIUTF8_TYPE
 };
 
 static enum imageType image_type = PNG_TYPE;
@@ -66,6 +72,8 @@ static const struct option options[] = {
 	{"ignorecase"   , no_argument      , NULL, 'i'},
 	{"8bit"         , no_argument      , NULL, '8'},
 	{"micro"        , no_argument      , NULL, 'M'},
+	{"foreground"	, required_argument, NULL, 'f'},
+	{"background"	, required_argument, NULL, 'b'},
 	{"version"      , no_argument      , NULL, 'V'},
 	{NULL, 0, NULL, 0}
 };
@@ -100,7 +108,8 @@ static void usage(int help, int longopt)
 "               specify the width of the margins. (default=4 (2 for Micro)))\n\n"
 "  -d NUMBER, --dpi=NUMBER\n"
 "               specify the DPI of the generated PNG. (default=72)\n\n"
-"  -t {PNG,EPS,SVG,ANSI,ANSI256,ASCII}, --type={PNG,EPS,SVG,ANSI,ANSI256,ASCII}\n"
+"  -t {PNG,EPS,SVG,ANSI,ANSI256,ASCII,ASCIIi,UTF8,ANSIUTF8}, --type={PNG,EPS,\n"
+"               SVG,ANSI,ANSI256,ASCII,ASCIIi,UTF8,ANSIUTF8}\n"
 "               specify the type of the generated image. (default=PNG)\n\n"
 "  -S, --structured\n"
 "               make structured symbols. Version must be specified.\n\n"
@@ -111,6 +120,11 @@ static void usage(int help, int longopt)
 "               ignore case distinctions and use only upper-case characters.\n\n"
 "  -8, --8bit   encode entire data in 8-bit mode. -k, -c and -i will be ignored.\n\n"
 "  -M, --micro  encode in a Micro QR Code. (experimental)\n\n"
+"  --foreground=RRGGBB[AA]\n"
+"  --background=RRGGBB[AA]\n"
+"               specify foreground/background color in hexadecimal notation.\n"
+"               6-digit (RGB) or 8-digit (RGBA) form are supported.\n"
+"               Color output support available only in PNG and SVG.\n"
 "  -V, --version\n"
 "               display the version number and copyrights of the qrencode.\n\n"
 "  [STRING]     input data. If it is not specified, data will be taken from\n"
@@ -132,7 +146,7 @@ static void usage(int help, int longopt)
 "  -v NUMBER    specify the version of the symbol. (default=auto)\n"
 "  -m NUMBER    specify the width of the margins. (default=4 (2 for Micro))\n"
 "  -d NUMBER    specify the DPI of the generated PNG. (default=72)\n"
-"  -t {PNG,EPS,SVG,ANSI,ANSI256,ASCII}\n"
+"  -t {PNG,EPS,SVG,ANSI,ANSI256,ASCII,ASCIIi,UTF8,ANSIUTF8}\n"
 "               specify the type of the generated image. (default=PNG)\n"
 "  -S           make structured symbols. Version must be specified.\n"
 "  -k           assume that the input text contains kanji (shift-jis).\n"
@@ -140,12 +154,38 @@ static void usage(int help, int longopt)
 "  -i           ignore case distinctions and use only upper-case characters.\n"
 "  -8           encode entire data in 8-bit mode. -k, -c and -i will be ignored.\n"
 "  -M           encode in a Micro QR Code.\n"
+"  --foreground=RRGGBB[AA]\n"
+"  --background=RRGGBB[AA]\n"
+"               specify foreground/background color in hexadecimal notation.\n"
+"               6-digit (RGB) or 8-digit (RGBA) form are supported.\n"
+"               Color output support available only in PNG and SVG.\n"
 "  -V           display the version number and copyrights of the qrencode.\n"
 "  [STRING]     input data. If it is not specified, data will be taken from\n"
 "               standard input.\n"
 			);
 		}
 	}
+}
+
+static int color_set(unsigned int color[4], const char *value)
+{
+	int len = strlen(value);
+	int count;
+	if(len == 6) {
+		count = sscanf(value, "%02x%02x%02x%n", &color[0], &color[1], &color[2], &len);
+		if(count < 3 || len != 6) {
+			return -1;
+		}
+		color[3] = 255;
+	} else if(len == 8) {
+		count = sscanf(value, "%02x%02x%02x%02x%n", &color[0], &color[1], &color[2], &color[3], &len);
+		if(count < 4 || len != 8) {
+			return -1;
+		}
+	} else {
+		return -1;
+	}
+	return 0;
 }
 
 #define MAX_DATA_SIZE (7090 * 16) /* from the specification */
@@ -198,6 +238,8 @@ static int writePNG(QRcode *qrcode, const char *outfile)
 	static FILE *fp; // avoid clobbering by setjmp.
 	png_structp png_ptr;
 	png_infop info_ptr;
+	png_colorp palette;
+	png_byte alpha_values[2];
 	unsigned char *row, *p, *q;
 	int x, y, xx, yy, bit;
 	int realwidth;
@@ -238,11 +280,23 @@ static int writePNG(QRcode *qrcode, const char *outfile)
 		exit(EXIT_FAILURE);
 	}
 
+	palette = (png_colorp) malloc(sizeof(png_color) * 2);
+	palette[0].red   = fg_color[0];
+	palette[0].green = fg_color[1];
+	palette[0].blue  = fg_color[2];
+	palette[1].red   = bg_color[0];
+	palette[1].green = bg_color[1];
+	palette[1].blue  = bg_color[2];
+	alpha_values[0] = fg_color[3];
+	alpha_values[1] = bg_color[3];
+	png_set_PLTE(png_ptr, info_ptr, palette, 2);
+	png_set_tRNS(png_ptr, info_ptr, alpha_values, 2, NULL);
+
 	png_init_io(png_ptr, fp);
 	png_set_IHDR(png_ptr, info_ptr,
 			realwidth, realwidth,
 			1,
-			PNG_COLOR_TYPE_GRAY,
+			PNG_COLOR_TYPE_PALETTE,
 			PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT,
 			PNG_FILTER_TYPE_DEFAULT);
@@ -319,7 +373,7 @@ static int writeEPS(QRcode *qrcode, const char *outfile)
 				"0 -1 rlineto "
 				"fill "
 				"} bind def "
-				"3 3 scale ");
+				"%d %d scale ", size, size);
 	
 	/* data */
 	p = qrcode->data;
@@ -340,36 +394,111 @@ static int writeEPS(QRcode *qrcode, const char *outfile)
 	return 0;
 }
 
-static int writeSVG(QRcode *qrcode, const char *outfile)
+static void writeSVG_writeRect(FILE *fp, int x, int y, int width, char* col, float opacity)
+{
+	if(fg_color[3] != 255) {
+		fprintf(fp, "\t\t\t<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"1\" "\
+				"fill=\"#%s\" fill-opacity=\"%f\" />\n", 
+				x, y, width, col, opacity );
+	} else {
+		fprintf(fp, "\t\t\t<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"1\" "\
+				"fill=\"#%s\" />\n", 
+				x, y, width, col );
+	}
+}
+
+static int writeSVG( QRcode *qrcode, const char *outfile )
 {
 	FILE *fp;
 	unsigned char *row, *p;
-	int x, y, yy, xx;
-	int realwidth;
+	int x, y, x0, pen;
+	int symwidth, realwidth;
+	float scale;
+	char fg[7], bg[7];
+	float fg_opacity;
+	float bg_opacity;
 
 	fp = openFile(outfile);
 
-	realwidth = (qrcode->width + margin * 2) * size;
-   
-	/* SVG file header */
-	fprintf(fp, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"%d\" height=\"%d\">\n\t<g>\n",
-			realwidth, realwidth);
+	scale = dpi * INCHES_PER_METER / 100.0;
 
-	/* data */
+	symwidth = qrcode->width + margin * 2;
+	realwidth = symwidth * size;
+
+	snprintf(fg, 7, "%02x%02x%02x", fg_color[0], fg_color[1],  fg_color[2]);
+	snprintf(bg, 7, "%02x%02x%02x", bg_color[0], bg_color[1],  bg_color[2]);
+	fg_opacity = (float)fg_color[3] / 255;
+	bg_opacity = (float)bg_color[3] / 255;
+
+	/* XML declaration */
+	fputs( "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n", fp );
+
+	/* DTD 
+	   No document type specified because "while a DTD is provided in [the SVG] 
+	   specification, the use of DTDs for validating XML documents is known to be 
+	   problematic. In particular, DTDs do not handle namespaces gracefully. It 
+	   is *not* recommended that a DOCTYPE declaration be included in SVG 
+	   documents." 
+	   http://www.w3.org/TR/2003/REC-SVG11-20030114/intro.html#Namespace
+	*/
+
+	/* Vanity remark */
+	fprintf( fp, "<!-- Created with qrencode %s (http://fukuchi.org/works/qrencode/index.html.en) -->\n", 
+			QRcode_APIVersionString() );
+
+	/* SVG code start */
+	fprintf( fp, "<svg width=\"%0.2fcm\" height=\"%0.2fcm\" viewBox=\"0 0 %d %d\""\
+			" preserveAspectRatio=\"none\" version=\"1.1\""\
+			" xmlns=\"http://www.w3.org/2000/svg\">\n", 
+			realwidth / scale, realwidth / scale, symwidth, symwidth
+		   );
+
+	/* Make named group */
+	fputs( "\t<g id=\"QRcode\">\n", fp );
+
+	/* Make solid background */
+	if(bg_color[3] != 255) {
+		fprintf(fp, "\t\t<rect x=\"0\" y=\"0\" width=\"%d\" height=\"%d\" fill=\"#%s\" fill-opacity=\"%f\" />\n", symwidth, symwidth, bg, bg_opacity);
+	} else {
+		fprintf(fp, "\t\t<rect x=\"0\" y=\"0\" width=\"%d\" height=\"%d\" fill=\"#%s\" />\n", symwidth, symwidth, bg);
+	}
+
+	/* Create new viewbox for QR data */
+	fputs( "\t\t<g id=\"Pattern\">\n", fp);
+
+	/* Write data */
 	p = qrcode->data;
 	for(y=0; y<qrcode->width; y++) {
 		row = (p+(y*qrcode->width));
-		yy = (y + margin) * size;	
+
+		/* simple RLE */
+		pen = 0;
+		x0  = 0;
 		for(x=0; x<qrcode->width; x++) {
-			if(*(row+x)&0x1) {
-				xx = (x + margin) * size;
-				fprintf(fp, "\t\t<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" style=\"fill:black\"/>\n", xx,  yy, size, size);
+			if( !pen ) {
+				pen = *(row+x)&0x1;
+				x0 = x;
+			} else {
+				if(!(*(row+x)&0x1)) {
+					writeSVG_writeRect(fp, x0 + margin, y + margin, x-x0, fg, fg_opacity);
+					pen = 0;
+				}
 			}
+		}
+		if( pen ) {
+			writeSVG_writeRect(fp, x0 + margin, y + margin, qrcode->width - x0, fg, fg_opacity);
 		}
 	}
 
-	fprintf(fp, "\t</g>\n</svg>");
-	fclose(fp);
+	/* Close QR data viewbox */
+	fputs( "\t\t</g>\n", fp );
+
+	/* Close group */
+	fputs( "\t</g>\n", fp );
+
+	/* Close SVG code */
+	fputs( "</svg>\n", fp );
+	fclose( fp );
 
 	return 0;
 }
@@ -469,6 +598,82 @@ static int writeANSI(QRcode *qrcode, const char *outfile)
 
 	fclose(fp);
 	free(buffer);
+
+	return 0;
+}
+
+static void writeUTF8_margin(FILE* fp, int realwidth,
+			     const char* white, const char *reset,
+			     int use_ansi)
+{
+	int x, y;
+
+	for (y = 0; y < margin/2; y++) {
+		fputs(white, fp);
+		for (x = 0; x < realwidth; x++)
+			fputs("\342\226\210", fp);
+		fputs(reset, fp);
+		fputc('\n', fp);
+	}
+}
+
+static int writeUTF8(QRcode *qrcode, const char *outfile, int use_ansi)
+{
+	FILE *fp;
+	int x, y;
+	int realwidth;
+	unsigned char *p;
+	const char *white, *reset;
+
+	if (use_ansi){
+		white = "\033[40;37;1m";
+		reset = "\033[0m";
+	} else {
+		white = "";
+		reset = "";
+	}
+
+	fp = openFile(outfile);
+
+	realwidth = (qrcode->width + margin * 2);
+
+	/* top margin */
+	writeUTF8_margin(fp, realwidth, white, reset, use_ansi);
+
+	/* data */
+	p = qrcode->data;
+	for(y = 0; y < qrcode->width; y += 2) {
+		unsigned char *row1, *row2;
+		row1 = p + y*qrcode->width;
+		row2 = p + y*qrcode->width + qrcode->width;
+
+		fputs(white, fp);
+
+		for (x = 0; x < margin; x++)
+			fputs("\342\226\210", fp);
+
+		for (x = 0; x < qrcode->width; x++) {
+			if ((*(row1 + x) & 1) && (*(row2 + x) & 1))
+				fputc(' ', fp);
+			else if (*(row1 + x) & 1)
+				fputs("\342\226\204", fp);
+			else if (*(row2 + x) & 1)
+				fputs("\342\226\200", fp);
+			else
+				fputs("\342\226\210", fp);
+		}
+
+		for (x = 0; x < margin; x++)
+			fputs("\342\226\210", fp);
+
+		fputs(reset, fp);
+		fputc('\n', fp);
+	}
+
+	/* bottom margin */
+	writeUTF8_margin(fp, realwidth, white, reset, use_ansi);
+
+	fclose(fp);
 
 	return 0;
 }
@@ -602,6 +807,12 @@ static void qrencode(const unsigned char *intext, int length, const char *outfil
 		case ASCII_TYPE:
 			writeASCII(qrcode, outfile,  0);
 			break;
+		case UTF8_TYPE:
+			writeUTF8(qrcode, outfile, 0);
+			break;
+		case ANSIUTF8_TYPE:
+			writeUTF8(qrcode, outfile, 1);
+			break;
 		default:
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
@@ -644,6 +855,8 @@ static void qrencodeStructured(const unsigned char *intext, int length, const ch
 		case ANSI_TYPE:
 		case ANSI256_TYPE:
 		case ASCII_TYPE:
+		case UTF8_TYPE:
+		case ANSIUTF8_TYPE:
 			type_suffix = ".txt";
 			break;
 		default:
@@ -705,6 +918,13 @@ static void qrencodeStructured(const unsigned char *intext, int length, const ch
 			case ASCII_TYPE:
 				writeASCII(p->code, filename, 0);
 				break;
+			case UTF8_TYPE:
+				writeUTF8(p->code, filename, 0);
+				break;
+			case ANSIUTF8_TYPE:
+				writeUTF8(p->code, filename, 0);
+				break;
+
 			default:
 				fprintf(stderr, "Unknown image type.\n");
 				exit(EXIT_FAILURE);
@@ -807,6 +1027,10 @@ int main(int argc, char **argv)
 					image_type = ASCIIi_TYPE;
 				} else if(strcasecmp(optarg, "ascii") == 0) {
 					image_type = ASCII_TYPE;
+				} else if(strcasecmp(optarg, "utf8") == 0) {
+					image_type = UTF8_TYPE;
+				} else if(strcasecmp(optarg, "ansiutf8") == 0) {
+					image_type = ANSIUTF8_TYPE;
 				} else {
 					fprintf(stderr, "Invalid image type: %s\n", optarg);
 					exit(EXIT_FAILURE);
@@ -828,6 +1052,18 @@ int main(int argc, char **argv)
 				break;
 			case 'M':
 				micro = 1;
+				break;
+			case 'f':
+				if(color_set(fg_color, optarg)) {
+					fprintf(stderr, "Invalid foreground color value.\n");
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'b':
+				if(color_set(bg_color, optarg)) {
+					fprintf(stderr, "Invalid background color value.\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'V':
 				usage(0, 0);
